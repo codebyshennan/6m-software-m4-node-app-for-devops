@@ -1,11 +1,17 @@
 version: 2.1
+
 orbs:
+  # Node.js orb provides functionality for working with Node.js applications
   node: circleci/node@5.0.1
+  # Docker orb provides commands for building and publishing Docker images
   docker: circleci/docker@2.1.4
+  # Heroku orb provides integration with Heroku deployment platform
   heroku: circleci/heroku@2.0.0
+  # Snyk orb provides security scanning features
   snyk: snyk/snyk@1.5.0
 
 jobs:
+  # The 'build' job installs dependencies for the application
   build:
     docker:
       - image: cimg/node:16.10
@@ -17,6 +23,7 @@ jobs:
           echo "Installing dependencies..."
           npm install
 
+  # The 'test' job runs your application tests
   test:
     docker:
       - image: cimg/node:16.10
@@ -28,6 +35,7 @@ jobs:
           echo "Running tests..."
           npm run test
   
+  # The 'scan' job performs container security scanning
   scan:
     docker:
       - image: cimg/node:16.10
@@ -36,11 +44,14 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker      
-      - docker/check
+      - docker/check:
+          docker-username: DOCKERHUB_LOGIN
+          docker-password: DOCKERHUB_PASSWORD
       - run: docker build -t $IMAGE_NAME .
       - snyk/scan: 
           docker-image-name: $IMAGE_NAME
 
+  # The 'codescan' job performs static code analysis on your source code
   codescan:
     docker:
       - image: cimg/node:16.10
@@ -52,19 +63,21 @@ jobs:
       - run: |
           snyk code test
   
+  # The 'publish' job builds and pushes your Docker image to a registry
   publish:
     executor: docker/docker
     steps:
       - setup_remote_docker
       - checkout
       - docker/check:
-          docker-username: DOCKERHUB_LOGIN  # DOCKER_LOGIN is the default value, if it exists, it automatically would be used.
-          docker-password: DOCKERHUB_PASSWORD  # DOCKER_PASSWORD is the default value
+          docker-username: DOCKERHUB_LOGIN
+          docker-password: DOCKERHUB_PASSWORD
       - docker/build:
           image: wongshennan/test_repository
       - docker/push:
           image: wongshennan/test_repository
 
+  # The 'deploy' job deploys your application to Heroku
   deploy:
     docker:
       - image: cimg/node:16.10
@@ -80,6 +93,7 @@ jobs:
               heroku container:push web -a shennan-su-devops
               heroku container:release web -a shennan-su-devops
 
+# Workflows define the order of jobs and their dependencies
 workflows:
   simple_workflow:
     jobs:
