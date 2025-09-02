@@ -1,121 +1,23 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/reference/configuration-reference
 version: 2.1
 
+# Orbs are reusable packages of CircleCI configuration that you may share across projects, enabling you to create encapsulated, parameterized commands, jobs, and executors that can be used across multiple projects.
+# See: https://circleci.com/docs/orbs/use/orb-intro/
 orbs:
-  # Node.js orb provides functionality for working with Node.js applications
-  node: circleci/node@5.0.1
-  # Docker orb provides commands for building and publishing Docker images
-  docker: circleci/docker@2.1.4
-  # Heroku orb provides integration with Heroku deployment platform
-  heroku: circleci/heroku@2.0.0
-  # Snyk orb provides security scanning features
-  snyk: snyk/snyk@1.5.0
+  # See the Node orb documentation here: https://circleci.com/developer/orbs/orb/circleci/node
+  node: circleci/node@5.2
 
-jobs:
-  # The 'build' job installs dependencies for the application
-  build:
-    docker:
-      - image: cimg/node:16.10
-    steps:
-      - checkout
-      - node/install-packages:
-          pkg-manager: npm
-      - run: |
-          echo "Installing dependencies..."
-          npm install
-
-  # The 'test' job runs your application tests
-  test:
-    docker:
-      - image: cimg/node:16.10
-    steps:
-      - checkout
-      - node/install-packages:
-          pkg-manager: npm
-      - run: |
-          echo "Running tests..."
-          npm run test
-  
-  # The 'scan' job performs container security scanning
-  scan:
-    docker:
-      - image: cimg/node:16.10
-    environment:
-      IMAGE_NAME: wongshennan/test_repository
-    steps:
-      - checkout
-      - setup_remote_docker      
-      - docker/check:
-          docker-username: DOCKERHUB_LOGIN
-          docker-password: DOCKERHUB_PASSWORD
-      - run: docker build -t $IMAGE_NAME .
-      - snyk/scan: 
-          docker-image-name: $IMAGE_NAME
-          # The "fail-on-issues: false" option makes the scan report issues but always exit with code 0
-          # This allows the pipeline to continue even if vulnerabilities are found
-          fail-on-issues: true
-          severity-threshold: high
-
-  # The 'codescan' job performs static code analysis on your source code
-  codescan:
-    docker:
-      - image: cimg/node:16.10
-    steps:
-      - checkout
-      - node/install-packages:
-          pkg-manager: npm
-      - snyk/install
-      - run: |
-          snyk code test
-  
-  # The 'publish' job builds and pushes your Docker image to a registry
-  publish:
-    executor: docker/docker
-    steps:
-      - setup_remote_docker
-      - checkout
-      - docker/check:
-          docker-username: DOCKERHUB_LOGIN
-          docker-password: DOCKERHUB_PASSWORD
-      - docker/build:
-          image: wongshennan/test_repository
-      - docker/push:
-          image: wongshennan/test_repository
-
-  # The 'deploy' job deploys your application to Heroku
-  deploy:
-    docker:
-      - image: cimg/node:16.10
-    steps:
-      - setup_remote_docker      
-      - heroku/install
-      - checkout
-      - run:
-          name: Heroku Container Push
-          command: | 
-              heroku container:login
-              heroku stack:set container -a shennan-su-devops
-              heroku container:push web -a shennan-su-devops
-              heroku container:release web -a shennan-su-devops
-
-# Workflows define the order of jobs and their dependencies
+# Orchestrate jobs using workflows
+# See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
 workflows:
-  simple_workflow:
+  sample: # This is the name of the workflow, feel free to change it to better match your workflow.
+    # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - build
-      - test:
-          requires:
-            - build
-      - scan:
-          requires:
-            - build
-      - codescan:
-          requires:
-            - build
-      - publish:
-          requires:
-            - test
-            - scan
-            - codescan
-      - deploy:
-          requires:
-            - publish
+      - node/test:
+          # This is the node version to use for the `cimg/node` tag
+          # Relevant tags can be found on the CircleCI Developer Hub
+          # https://circleci.com/developer/images/image/cimg/node
+          version: '16.10'
+          # If you are using yarn, change the line below from "npm" to "yarn"
+          pkg-manager: npm
